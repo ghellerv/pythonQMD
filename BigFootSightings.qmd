@@ -1,0 +1,109 @@
+---
+title: "Big Foot Sightings"
+description: "A Shiny app to explore Big Foot sightings"
+author: "Vitor Gheller"
+format: 
+    dashboard:
+        theme: darkly
+server: shiny
+---
+
+```{python}
+#| context: setup
+import seaborn as sns
+from ipyleaflet import Map, Marker, MarkerCluster
+from shiny import reactive
+from shiny import App
+from shiny.express import render, ui
+from shinywidgets import render_widget, output_widget
+import pandas as pd
+
+bigfoot = pd.read_csv("bigfoot.csv", sep=",")
+bigfoot['date'] = pd.to_datetime(bigfoot['date'], format='%Y-%m-%d')
+```
+
+#  {.sidebar}
+
+```{python}
+ui.input_select(
+    "state",
+    label="Select a state",
+    choices=sorted(bigfoot["state"].dropna().unique()),
+    selected="WA", 
+)
+
+min_date = bigfoot["date"].min().date()
+max_date = bigfoot["date"].max().date()
+ui.input_date_range(
+    "date_range",
+    label="Select a date range",
+    start=min_date,
+    end=max_date,
+    format="yyyy-mm-dd",
+)
+
+@reactive.calc
+def filtered_bigfoot():
+    start_date, end_date = input.date_range()
+    selected_state = input.state()
+    df = bigfoot.copy()
+    df = df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
+    df = df[df["state"] == selected_state]
+    return df
+
+```
+
+
+
+
+# Plots
+
+```{python}
+my_palette = ["#4B5320", "#8B4513", "#A0522D", "#D2B48C", "#556B2F", "#6B8E23", "#2E8B57"] 
+sns.set_palette(my_palette)
+@render.plot
+def graph1():
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.countplot(
+        data=filtered_bigfoot(),
+        x="season",
+        hue="classification",
+        ax=ax
+    )
+    ax.set_title("Sightings per Season")
+    ax.set_xlabel("Season")
+    ax.set_ylabel("Number of Sightings")
+    return fig
+```
+
+```{python}
+@render.plot
+def climate_distributions():
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    df = filtered_bigfoot()
+
+    fig, ax = plt.subplots(2, 3, figsize=(8, 5))
+    sns.histplot(data=df, x='humidity', ax=ax[0, 0], color='#4B5320')
+    sns.histplot(data=df, x='wind_speed', ax=ax[0, 1], color='#4B5320')
+    sns.histplot(data=df, x='pressure', ax=ax[0, 2], color='#4B5320')
+    sns.histplot(data=df, x='moon_phase', ax=ax[1, 0], color='#4B5320')
+    sns.histplot(data=df, x='visibility', ax=ax[1, 1], color='#4B5320')
+    sns.histplot(data=df, x='temperature_mid', ax=ax[1, 2], color='#4B5320')
+
+    fig.suptitle("Distribution of Climatic Conditions During Sightings", fontsize=14)
+    plt.tight_layout()
+    return fig
+```
+
+# Data
+
+```{python}
+@render.data_frame
+def dataview():
+    return render.DataGrid(filtered_bigfoot())
+```
