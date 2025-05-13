@@ -7,14 +7,15 @@ from pathlib import Path
 from shiny import App, Inputs, Outputs, Session, ui
 
 import seaborn as sns
-from ipyleaflet import Map, Marker, MarkerCluster
 from shiny import reactive
 from shiny import App
 from shiny.express import render, ui
 from shinywidgets import render_widget, output_widget
 import pandas as pd
 
-bigfoot = pd.read_csv("bigfoot.csv", sep=",")
+url = "https://raw.githubusercontent.com/brownstarkachina/bigfoot/refs/heads/main/data/raw/bfro_reports_geocoded.csv"
+bigfoot = pd.read_csv(url, sep=",")
+#bigfoot = pd.read_csv("bigfoot.csv", sep=",")
 bigfoot['date'] = pd.to_datetime(bigfoot['date'], format='%Y-%m-%d')
 
 # ========================================================================
